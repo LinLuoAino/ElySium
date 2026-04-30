@@ -173,24 +173,26 @@ int Kernel::getPID(const char* packageName) {
 void Kernel::getUTF8(char * buf, uintptr_t namepy) {
     unsigned short buf16[16] = { 0 };
     read(namepy, buf16, 28);
-    unsigned short *pTempUTF16 = buf16;
     char *pTempUTF8 = buf;
     char *pUTF8End = pTempUTF8 + 32;
-    while (pTempUTF16 < pTempUTF16 + 28) {
-        if (*pTempUTF16 <= 0x007F && pTempUTF8 + 1 < pUTF8End) {
-            *pTempUTF8++ = (char) * pTempUTF16;
-        } else if (*pTempUTF16 >= 0x0080 && *pTempUTF16 <= 0x07FF && pTempUTF8 + 2 < pUTF8End) {
-            *pTempUTF8++ = (*pTempUTF16 >> 6) | 0xC0;
-            *pTempUTF8++ = (*pTempUTF16 & 0x3F) | 0x80;
-        } else if (*pTempUTF16 >= 0x0800 && *pTempUTF16 <= 0xFFFF && pTempUTF8 + 3 < pUTF8End) {
-            *pTempUTF8++ = (*pTempUTF16 >> 12) | 0xE0;
-            *pTempUTF8++ = ((*pTempUTF16 >> 6) & 0x3F) | 0x80;
-            *pTempUTF8++ = (*pTempUTF16 & 0x3F) | 0x80;
+    const size_t utf16_count = 28 / sizeof(unsigned short);
+
+    for (size_t i = 0; i < utf16_count && buf16[i] != 0; ++i) {
+        const unsigned short ch = buf16[i];
+        if (ch <= 0x007F && pTempUTF8 + 1 < pUTF8End) {
+            *pTempUTF8++ = (char)ch;
+        } else if (ch <= 0x07FF && pTempUTF8 + 2 < pUTF8End) {
+            *pTempUTF8++ = (char)((ch >> 6) | 0xC0);
+            *pTempUTF8++ = (char)((ch & 0x3F) | 0x80);
+        } else if (ch <= 0xFFFF && pTempUTF8 + 3 < pUTF8End) {
+            *pTempUTF8++ = (char)((ch >> 12) | 0xE0);
+            *pTempUTF8++ = (char)(((ch >> 6) & 0x3F) | 0x80);
+            *pTempUTF8++ = (char)((ch & 0x3F) | 0x80);
         } else {
             break;
         }
-        pTempUTF16++;
     }
+    *pTempUTF8 = '\0';
 }
 
 int Kernel::add_breakpoint(uintptr_t addr, int type, int len) {

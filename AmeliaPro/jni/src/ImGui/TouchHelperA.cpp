@@ -52,6 +52,7 @@ static int fdNum = 0, origfd[maxE];
 static bool Touch_initialized = false;
 static bool Touch_readOnly = false;
 static volatile bool bTouch = false;
+static constexpr int kVirtualTouchSlot = 5;
 
 D2DVector Touch2Screen(float x, float y) {
     float xt = x / scale_x;
@@ -71,17 +72,14 @@ static void Upload() {
     bTouch = true;
     int tmpCnt = 0;
 
-    for (int j = 0; j < maxF; j++) {
-        if (j != 9) continue; 
-
-        input.event[tmpCnt++] = {{}, EV_ABS, ABS_MT_SLOT, j};
-        if (VirtualFinger[j].isDown) {
-            input.event[tmpCnt++] = {{}, EV_ABS, ABS_MT_TRACKING_ID, VirtualFinger[j].id};
-            input.event[tmpCnt++] = {{}, EV_ABS, ABS_MT_POSITION_X, VirtualFinger[j].x};
-            input.event[tmpCnt++] = {{}, EV_ABS, ABS_MT_POSITION_Y, VirtualFinger[j].y};
-        } else {
-            input.event[tmpCnt++] = {{}, EV_ABS, ABS_MT_TRACKING_ID, -1};
-        }
+    const int slot = kVirtualTouchSlot;
+    input.event[tmpCnt++] = {{}, EV_ABS, ABS_MT_SLOT, slot};
+    if (VirtualFinger[slot].isDown) {
+        input.event[tmpCnt++] = {{}, EV_ABS, ABS_MT_TRACKING_ID, VirtualFinger[slot].id};
+        input.event[tmpCnt++] = {{}, EV_ABS, ABS_MT_POSITION_X, VirtualFinger[slot].x};
+        input.event[tmpCnt++] = {{}, EV_ABS, ABS_MT_POSITION_Y, VirtualFinger[slot].y};
+    } else {
+        input.event[tmpCnt++] = {{}, EV_ABS, ABS_MT_TRACKING_ID, -1};
     }
     
     if (tmpCnt > 0) {
@@ -219,7 +217,7 @@ void UpdateScreenData(int w, int h, uint32_t orientation_) {
 }
 
 void Touch_Down(int id, float x, float y) {
-    int slot = 5; 
+    int slot = kVirtualTouchSlot;
     VirtualFinger[slot].x = (int) (x * scale_x);
     VirtualFinger[slot].y = (int) (y * scale_y);
     VirtualFinger[slot].id = 2000 + id;
@@ -232,7 +230,7 @@ void Touch_Move(int id, float x, float y) {
 }
 
 void Touch_Up(int id) {
-    int slot = 5;
+    int slot = kVirtualTouchSlot;
     VirtualFinger[slot].isDown = false;
     Upload();
 }
