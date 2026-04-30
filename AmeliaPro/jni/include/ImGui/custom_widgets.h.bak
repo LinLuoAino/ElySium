@@ -1,0 +1,210 @@
+#pragma once
+
+#define IMGUI_DEFINE_MATH_OPERATORS
+
+#include "imgui.h"
+#include "imgui_internal.h"
+#include "custom_colors.h"
+#include "custom_settings.h"
+#include <map>
+#include <cmath>
+#include <string>
+#include <sstream>
+#include <vector>
+#include <chrono>
+#include <vector>
+#include <algorithm>
+
+enum watermark_position : int {
+	mark_top_left = 0,
+	mark_top_right = 1,
+	mark_bottom_left = 2,
+	mark_bottom_right = 3,
+};
+
+class c_widgets
+{
+public:
+    template <typename T>
+    T* anim_container(T** state_ptr, ImGuiID id)
+    {
+        T* state = static_cast<T*>(ImGui::GetStateStorage()->GetVoidPtr(id));
+        if (!state)
+            ImGui::GetStateStorage()->SetVoidPtr(id, state = new T());
+
+        *state_ptr = state;
+        return state;
+    }
+    
+    void set_next_window_pos(const ImVec2& pos, ImGuiCond cond, const ImVec2& pivot);
+    
+    void water_mark(std::string name, std::vector<std::string> function, watermark_position type, bool* visible);
+    
+    bool begin_popup(float size);
+    
+    ImU32 get_clr(const ImVec4& col, float alpha = 1.f);
+
+    float fixed_speed(float speed) { return speed / ImGui::GetIO().Framerate; };
+
+    void set_cursor_pos(const ImVec2& local_pos);
+
+    void begin_group();
+
+    void end_group();
+
+    void push_style_var(ImGuiStyleVar idx, const ImVec2& val);
+
+    void pop_style_var();
+
+    void sameline();
+
+    bool begin(std::string_view name, bool* open, ImGuiWindowFlags flags = ImGuiWindowFlags_None);
+
+    void end();
+
+    bool selection(std::string_view label, std::string_view icon, int selection_id, int& selection_variable, int total_items, int item_index, bool round_corner = false);
+
+    void begin_content();
+    
+    void end_content();
+
+    bool begin_def_child(std::string_view name, const ImVec2& size_arg = ImVec2(0, 0));
+
+    void end_def_child();
+
+    bool begin_child(std::string_view name, const ImVec2& size_arg = ImVec2(0, 0));
+
+    void end_child();
+
+    bool checkbox(std::string_view label, bool* callback, bool popup = false);
+
+    bool PopUpCheckbox(std::string_view Icon, std::string_view label, bool* callback, bool popup = false);
+
+    void checkbox_with_popup(std::string_view label, bool* callback, bool keybind = 0, bool palette = 0, std::string_view hint = "", int* key = 0, int* mode = 0, float color[4] = 0, ImGuiColorEditFlags flags = 0);
+
+    bool slider_float(std::string_view label, float* v, float v_min, float v_max, const char* format = "%.2f", ImGuiSliderFlags flags = 0);
+
+    bool slider_int(std::string_view label, int* v, int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0);
+
+    bool dropdown(std::string_view label, int* current_item, const char* const items[], int items_count);
+    
+    bool dropdown(std::string_view label, int* current_item, const std::vector<std::string>& items);
+
+    void multi_dropdown(std::string_view label, bool variable[], const char* labels[], int count);
+
+    bool text_field(std::string_view label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = 0, void* user_data = NULL);
+
+    bool color_edit(std::string_view label, float col[4], ImGuiColorEditFlags flags = 0, bool popup = false);
+
+    bool button(std::string_view label, const ImVec2& size_arg = ImVec2(0, 0));
+
+    bool IconButton(const char* icon, const ImVec2& size_arg, ImGuiButtonFlags flags);//图标 按钮
+
+    //旋转图像
+    void AddImageRotated(ImTextureID pic, float posX, float posY, float sizeX, float sizeY);//旋转图像
+
+};
+
+inline c_widgets* gui = new c_widgets();
+
+
+struct notify_struct {
+    int id;
+    std::string icon, message, information;
+    std::chrono::steady_clock::time_point startTime;
+    std::chrono::steady_clock::time_point endTime;
+    ImU32 color;
+};
+
+class c_notify {
+public:
+    c_notify() : notificationIdCounter(0) {}
+
+    void AddNotification(const std::string& icon, const std::string& information, const std::string& message, int durationMs, ImU32 color) {
+        auto now = std::chrono::steady_clock::now();
+        auto endTime = now + std::chrono::milliseconds(durationMs);
+        notifications.push_back({ notificationIdCounter++, icon, information, message, now, endTime, color });
+    }
+
+    void DrawNotifications() {
+        auto now = std::chrono::steady_clock::now();
+
+        std::sort(notifications.begin(), notifications.end(),
+            [now](const notify_struct& a, const notify_struct& b) -> bool {
+                float durationA = std::chrono::duration_cast<std::chrono::milliseconds>(a.endTime - a.startTime).count();
+                float elapsedA = std::chrono::duration_cast<std::chrono::milliseconds>(now - a.startTime).count();
+                float percentageA = (durationA - elapsedA) / durationA;
+
+                float durationB = std::chrono::duration_cast<std::chrono::milliseconds>(b.endTime - b.startTime).count();
+                float elapsedB = std::chrono::duration_cast<std::chrono::milliseconds>(now - b.startTime).count();
+                float percentageB = (durationB - elapsedB) / durationB;
+
+                return percentageA < percentageB;
+            }
+        );
+
+        int currentNotificationPosition = 0;
+
+        for (auto& notification : notifications) {
+            if (now < notification.endTime) {
+                float duration = std::chrono::duration_cast<std::chrono::milliseconds>(notification.endTime - notification.startTime).count();
+                float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - notification.startTime).count();
+                float percentage = (duration - elapsed) / duration * 100.0f;
+
+                ShowNotification(currentNotificationPosition, notification.icon, notification.information, notification.message, percentage, notification.color);
+                currentNotificationPosition++;
+            }
+        }
+
+        notifications.erase(std::remove_if(notifications.begin(), notifications.end(),
+            [now](const notify_struct& notification) { return now >= notification.endTime; }),
+            notifications.end());
+    }
+
+private:
+    std::vector<notify_struct> notifications;
+    int notificationIdCounter;
+
+    void ShowNotification(int position, const std::string& icon, const std::string& information, const std::string& message, float percentage, ImU32 color) {
+
+        ImGui::SetNextWindowPos(ImVec2(10, 10 + (position * 76) * DPI), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(300 * DPI, 66 * DPI));
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.f);
+
+        ImGui::Begin(("##NOTIFY" + std::to_string(position)).c_str(), nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground);
+        {
+            const ImVec2 pos = ImGui::GetWindowPos();
+            const ImVec2 size = ImGui::GetWindowSize();
+            ImDrawList* draw = ImGui::GetWindowDrawList();
+            ImGuiStyle* style = &ImGui::GetStyle();
+
+            { // style
+                style->WindowPadding = YuanerSet->window_padding;
+                style->WindowBorderSize = YuanerSet->window_border_size;
+                style->WindowRounding = YuanerSet->widgets_rounding;
+            }
+
+            { // decorations
+                draw->AddRectFilled(pos, ImVec2(pos.x + size.x,pos.y + size.y), gui->get_clr(clr->notify_background, 0.75f), YuanerSet->widgets_rounding);
+
+                draw->AddText(YuanerSet->inter_semibold_font, YuanerSet->inter_semibold_font->FontSize, ImVec2(pos.x + 36 * DPI, pos.y + 8 * DPI), color, message.c_str());
+                draw->AddText(YuanerSet->inter_semibold_font, YuanerSet->inter_semibold_font->FontSize, ImVec2(pos.x + 9 * DPI, pos.y + 41 * DPI), gui->get_clr(clr->notify_text), information.c_str());
+
+                draw->AddText(YuanerSet->icon, YuanerSet->icon->FontSize, ImVec2(pos.x + 10 * DPI, pos.y + 7 * DPI), color, icon.c_str());
+
+                draw->PathArcTo(ImVec2(pos.x + size.x - 15  * DPI, pos.y + 15  * DPI), 9.f * DPI, 0, IM_PI * 2, 60);
+                draw->PathStroke(gui->get_clr(clr->notify_background, 0.5f), 0, 3);
+
+                draw->PathArcTo(ImVec2(pos.x + size.x - 15  * DPI, pos.y + 15  * DPI), 9.f * DPI, 0, (IM_PI * 2) * percentage / 100, 60);
+                draw->PathStroke(color, 0, 3);
+            }
+        }
+        ImGui::End();
+
+        ImGui::PopStyleVar(2);
+    }
+};
+
+inline c_notify* notify = new c_notify();

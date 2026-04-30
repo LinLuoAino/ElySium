@@ -1,0 +1,52 @@
+#pragma once
+#include "imgui.h"
+#include "VulkanUtils.h"
+
+extern float DPI;
+
+class c_settings
+{
+public:
+    ImVec2 window_size = ImVec2(800, 600);  // 窗口大小，宽650，高500
+
+    ImVec2 window_padding = ImVec2(0, 0);  // 窗口内边距，设置为(0, 0)表示无内边距
+    float window_border_size = 0.f;        // 窗口边框的宽度，设置为0表示没有边框
+    float window_rounding = 15.f;          // 窗口角落的圆角半径，设置为15表示圆角效果
+    float window_scrollbar_size = (18.625f * DPI);  // 滚动条的大小，DPI是屏幕的像素密度，乘以它来适应高分辨率显示
+    const char* Texticon = "\uECBE";  // 文本前的小图标
+    const char* cheat_name = "ELYSIUM";  // 瑗儿软件名称，这里是一个占位符字符串
+    const char* game_name = "\uE9D6";  // 游戏名称，示例中为《PUBG》
+    const char* user_name = "\uECC3";   // 用户名，示例为""
+
+    ImVec2 child_spacing = ImVec2(18 * DPI, 18);  // 子控件间距，宽18 * DPI，高10 * DPI，用于控制控件之间的距离
+    float child_rounding = 6.f;             // 子控件的圆角半径，设置为6.0表示有圆角效果
+
+    ImVec2 widgets_padding = ImVec2(11 * DPI, 11); // 控件内边距，水平和垂直方向均为11 * DPI
+    ImVec2 widgets_spacing = ImVec2(20 * DPI, 35); // 控件间的间距，水平和垂直方向均
+    float widgets_rounding = 4.f;           // 控件的圆角半径，设置为4.0表示控件有圆角效果
+    float combo_spacing = 10.f;      // 组合框控件的间距，10 * DPI用于适配不同屏幕分辨率
+
+    int selection_count = 0;                // 选择项的数量，初始为0
+    float selection_width = 0.f;            // 选择框的宽度，初始为0
+    const char* selection_labels[5] = {"视觉   ", "物资   ", "自瞄   ", "追踪   ", "设置   "};  // 选择项标签，共有四个选项，分别是"自动瞄准"、"视觉"、"杂项"、"设置"
+    
+    std::vector<std::string> watermark_list = { "左上角", "右上角", "左下角", "右下角" };
+    int watermark_selection = 1;
+    bool watermark = true;
+    bool open_popup = false;
+
+    float watermark_width = 0;              // 水印的宽度，初始为0，用于显示水印时的宽度设置
+    bool water_name = true;
+
+    const char* tab_textures_dx11[5] = {"\uED25","\uECD1","\uEC78","\uEC78","\uECF4"};
+    MyTextureData logo;        //悬浮窗图标
+    MyTextureData circle; //加载的图标
+    MyTextureData bg; //背景图
+
+    ImFont* inter_semibold_font = nullptr;  // "Inter" 字体（半粗体）
+    ImFont* inter_semibold_min_font = nullptr;  // "Inter" 字体（半粗体的小号版本）
+    ImFont* iconFont = nullptr;         // icon 图标
+    ImFont* icon = nullptr;         // icon 图标
+};
+
+inline c_settings* YuanerSet = new c_settings();
